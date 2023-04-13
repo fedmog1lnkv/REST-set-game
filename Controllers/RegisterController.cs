@@ -11,7 +11,7 @@ using SetGame.Database.Classes;
 public class RegisterController : ControllerBase
 {
     [HttpPost]
-    public IActionResult Register(UserJSON model)
+    public IActionResult Register(UserJson model)
     {
         DatabaseHandler handlerDb = new DatabaseHandler();
 
@@ -33,7 +33,7 @@ public class RegisterController : ControllerBase
                 nickname = model.Nickname,
                 accessToken = TokenGenerator.GenerateToken()
             };
-            handlerDb.Adduser(model.Nickname, model.Password, resp.accessToken);
+            handlerDb.AddUser(model.Nickname, model.Password, resp.accessToken);
             return Ok(resp);
         }
     }

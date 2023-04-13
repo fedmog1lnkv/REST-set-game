@@ -15,6 +15,8 @@ public class Users
 
     [Column("token")] public string Token { get; set; }
 
+    [Column("score")] public int Score { get; set; } = 0;
+
     public Users(string nickname, string password, string token)
     {
         Nickname = nickname;

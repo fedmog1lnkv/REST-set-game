@@ -68,9 +68,15 @@ namespace SetGame.Controllers
                 var gamesList = new List<object>();
                 foreach (var game in Rooms.AllRooms)
                 {
+                    if (game.Status == "ended" && game.Users.Count == 0)
+                    {
+                        Rooms.AllRooms.RemoveAll(gameDelete => gameDelete.IdGame == game.IdGame);
+                    }
+
                     var gameObject = new
                     {
                         id = game.IdGame,
+                        status = game.Status,
                         countCards = game.GetCountCards(),
                         countUsers = game.GetCountUsers(),
                         userIds = game.Users.Select(u => u.Id).ToArray()
@@ -139,6 +145,36 @@ namespace SetGame.Controllers
                     };
                     return Ok(resp);
                 }
+            }
+        }
+
+        [HttpPost]
+        [Route("leave")]
+        public IActionResult LeaveFromGame(TokenDto model)
+        {
+            DatabaseHandler handlerDb = new DatabaseHandler();
+            if (!handlerDb.CheckTokenUserExists(model.AccessToken))
+            {
+                var resp = new
+                {
+                    success = false,
+                    exception = EnumExtensions.ToString(EnumExtensions.Excepеtions.IncorectAuthorization)
+                };
+                return Ok(resp);
+            }
+            else
+            {
+                int userId = handlerDb.GetUserIdByToken(model.AccessToken);
+                Classes.SetGame? userRoom =
+                    Rooms.AllRooms.FirstOrDefault(room => room != null && room.Users.Any(user => user.Id == userId));
+                userRoom.LeaveUser(userId);
+
+                var resp = new
+                {
+                    success = true,
+                    exception = "null"
+                };
+                return Ok(resp);
             }
         }
 

@@ -22,6 +22,7 @@ public class SetGame
     public List<Card> Cards = new();
     public List<Card> FieldCards = new();
     public List<User> Users = new();
+    public string Status = "ongoing";
 
     public SetGame(int idGame)
     {
@@ -33,8 +34,13 @@ public class SetGame
     {
         Users.Add(new User(userId));
     }
-    
-    public void AddScoreAllUsers()
+
+    public void LeaveUser(int userId)
+    {
+        Users.RemoveAll(user => user.Id == userId);
+    }
+
+    private void AddScoreAllUsersInDatabase()
     {
         DatabaseHandler handlerDb = new DatabaseHandler();
         foreach (User user in Users)
@@ -92,36 +98,36 @@ public class SetGame
 
     private void GenerateField()
     {
-        while (FieldCards.Count < 12 || FindSet(FieldCards).Count == 0)
+        Random rnd = new Random();
+
+        for (int i = FieldCards.Count; i < 12 && Cards.Count > 0; i++)
         {
-            Random rnd = new Random();
-            for (int i = 0; i < 12; i++)
+            int randomIndex = rnd.Next(0, Cards.Count);
+
+            if (!FieldCards.Contains(Cards[randomIndex]))
             {
-                i = rnd.Next(0, Cards.Count);
-                if (i >= Cards.Count || FieldCards.Count == 12)
-                {
-                    break;
-                }
-
-                if (FieldCards.Contains(Cards[i]))
-                {
-                    continue;
-                }
-
-                FieldCards.Add(Cards[i]);
-            }
-
-            if (FindSet(FieldCards).Count == 0 && FieldCards.Count == 12)
-            {
-                FieldCards.Clear();
-                continue;
-            }
-
-            if (Cards.Count == 0)
-            {
-                break;
+                FieldCards.Add(Cards[randomIndex]);
             }
         }
+    }
+
+    public bool AddCard()
+    {
+        if (Cards.Count < 3 || Status == "ended")
+        {
+            return false;
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            int randomIndex = new Random().Next(0, Cards.Count);
+            if (!FieldCards.Contains(Cards[randomIndex]))
+            {
+                FieldCards.Add(Cards[randomIndex]);
+            }
+        }
+
+        return true;
     }
 
 
@@ -154,7 +160,17 @@ public class SetGame
     private void ReplaceCardsInField(Card a, Card b, Card c)
     {
         FieldCards.RemoveAll(x => x.Id == a.Id || x.Id == b.Id || x.Id == c.Id);
-        GenerateField();
+        CheckEndGame();
+        if (Status != "ended") GenerateField();
+    }
+
+    private void CheckEndGame()
+    {
+        if (Cards.Count < 21 && Card.FindSet(Cards) == new List<List<Card>>() && Status != "ended")
+        {
+            Status = "ended";
+            AddScoreAllUsersInDatabase();
+        }
     }
 
     public int GetCountCards()

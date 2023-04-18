@@ -30,12 +30,13 @@ namespace SetGame.Controllers
             }
             else
             {
-                // TODO : выдать пользователю поле из игры в которой он сидит и только те карты, которые сейчас на поле (сделать проверку что среди них есть сет)
                 int userId = handlerDb.GetUserIdByToken(model.AccessToken);
                 Classes.SetGame? userRoom =
                     Rooms.AllRooms.FirstOrDefault(room => room != null && room.Users.Any(user => user.Id == userId));
+
                 var resp = new
                 {
+                    status = userRoom?.Status,
                     cards = userRoom?.FieldCards
                 };
                 return Ok(resp);
@@ -57,7 +58,8 @@ namespace SetGame.Controllers
                 };
                 return Ok(resp);
             }
-            else if (model.Cards.Length != 3)
+
+            if (model.Cards.Length != 3)
             {
                 var resp = new
                 {
@@ -66,57 +68,91 @@ namespace SetGame.Controllers
                 };
                 return Ok(resp);
             }
+
+            int userId = handlerDb.GetUserIdByToken(model.AccessToken);
+            Classes.SetGame? userRoom =
+                Rooms.AllRooms.FirstOrDefault(room => room != null && room.Users.Any(user => user.Id == userId));
+
+            User oldUser = userRoom.Users.Find(user => user.Id == userId);
+            User newUser = oldUser;
+
+
+            if (userRoom.CheckSet(model.Cards[0], model.Cards[1], model.Cards[2]))
+            {
+                newUser.Score += 3;
+                userRoom.Users[userRoom.Users.IndexOf(oldUser)] = newUser;
+                var resp = new
+                {
+                    success = false,
+                    exception = "null",
+                    isSet = true,
+                    score = newUser.Score
+                };
+                return Ok(resp);
+            }
+
+            if (userRoom.Status == "ended")
+            {
+                var resp = new
+                {
+                    success = false,
+                    exception = "null",
+                    message = "Game ended."
+                };
+                return Ok(resp);
+            }
             else
             {
-                // TODO : нужна проверка по id карт в field
-                int userId = handlerDb.GetUserIdByToken(model.AccessToken);
-                Classes.SetGame? userRoom =
-                    Rooms.AllRooms.FirstOrDefault(room => room != null && room.Users.Any(user => user.Id == userId));
-
-                User oldUser = userRoom.Users.Find(user => user.Id == userId);
-                User newUser = oldUser;
-
-
-                if (userRoom.CheckSet(model.Cards[0], model.Cards[1], model.Cards[2]))
+                newUser.Score -= 1;
+                userRoom.Users[userRoom.Users.IndexOf(oldUser)] = newUser;
+                var resp = new
                 {
-                    newUser.Score += 3;
-                    userRoom.Users[userRoom.Users.IndexOf(oldUser)] = newUser;
-                    var resp = new
-                    {
-                        success = false,
-                        exception = "null",
-                        isSet = true,
-                        score = newUser.Score
-                    };
-                    return Ok(resp);
-                }
-                if (userRoom != null &&
-                         userRoom.CheckSet(model.Cards[0], model.Cards[1], model.Cards[2]) == false &&
-                         userRoom.Cards.Count < 12 && Card.FindSet(userRoom.FieldCards).Count == 0)
+                    success = false,
+                    exception = "null",
+                    isSet = false,
+                    score = newUser.Score
+                };
+                return Ok(resp);
+            }
+        }
+
+        // POST: set/add
+        [Route("add")]
+        [HttpPost]
+        public IActionResult AddCard(TokenDto model)
+        {
+            DatabaseHandler handlerDb = new DatabaseHandler();
+            if (!handlerDb.CheckTokenUserExists(model.AccessToken))
+            {
+                var resp = new
                 {
-                    var resp = new
-                    {
-                        success = false,
-                        exception = "null",
-                        message = "Game ended."
-                    };
-                    userRoom.AddScoreAllUsers();
-                    Rooms.AllRooms.RemoveAll(game => game.IdGame == userRoom.IdGame);
-                    return Ok(resp);
-                }
-                else
+                    success = false,
+                    exception = EnumExtensions.ToString(EnumExtensions.Excepеtions.IncorectAuthorization)
+                };
+                return Ok(resp);
+            }
+
+            int userId = handlerDb.GetUserIdByToken(model.AccessToken);
+            Classes.SetGame? userRoom =
+                Rooms.AllRooms.FirstOrDefault(room => room != null && room.Users.Any(user => user.Id == userId));
+
+            if (!userRoom.AddCard())
+            {
+                var resp = new
                 {
-                    newUser.Score -= 1;
-                    userRoom.Users[userRoom.Users.IndexOf(oldUser)] = newUser;
-                    var resp = new
-                    {
-                        success = false,
-                        exception = "null",
-                        isSet = false,
-                        score = newUser.Score
-                    };
-                    return Ok(resp);
-                }
+                    success = false,
+                    exception = EnumExtensions.ToString(EnumExtensions.Excepеtions.GameNotExists)
+                };
+                return Ok(resp);
+            }
+            else
+            {
+                var resp = new
+                {
+                    success = true,
+                    exception = "null"
+                };
+                return Ok(resp);
             }
         }
     }

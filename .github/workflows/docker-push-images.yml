@@ -22,7 +22,7 @@ jobs:
         password: ${{ env.DOCKER_PASSWORD }}
 
     - name: Build image
-      run: docker build . --file Dockerfile --tag $DOCKER_USERNAME/image-name:$TAG
+      run: docker build . --file Dockerfile --tag $DOCKER_USERNAME/rest-set-game:$TAG
 
     - name: Push image
-      run: docker push $DOCKER_USERNAME/image-name:$TAG
+      run: docker push $DOCKER_USERNAME/rest-set-game:$TAG
